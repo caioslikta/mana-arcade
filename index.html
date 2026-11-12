@@ -38,7 +38,7 @@ svg.pxi { display: block; }
 
 /* the whole device, minus notch / home indicator / rounded corners */
 .safe { position: fixed; inset: 0; box-sizing: border-box;
-  padding: env(safe-area-inset-top, 0px) max(4px, env(safe-area-inset-right, 0px)) max(14px, env(safe-area-inset-bottom, 0px)) max(4px, env(safe-area-inset-left, 0px)); }
+  padding: calc(env(safe-area-inset-top, 0px) + 16px) max(4px, env(safe-area-inset-right, 0px)) max(14px, env(safe-area-inset-bottom, 0px)) max(4px, env(safe-area-inset-left, 0px)); }
 .screen { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; overflow: hidden; }
 .bar { flex: none; height: 38px; display: flex; justify-content: center; align-items: center; gap: 18px; }
 .bar button { width: 42px; height: 38px; background: none; border: 0; color: var(--green); opacity: .75; cursor: pointer; display: grid; place-items: center; padding: 0; }
@@ -167,7 +167,7 @@ svg.pxi { display: block; }
 </div></div>
 
 <script>
-var APP_VERSION = '1.0.0';
+var APP_VERSION = '1.0.1';
 (function () {
   // ---------- pixel art (always integer scale k) ----------
   function rects(rows, map) {
@@ -245,7 +245,7 @@ var APP_VERSION = '1.0.0';
 
   // ---------- state (kept on the phone between opens) ----------
   var KEY = 'mana-arcade-v1';
-  var S = { layout: '4B', start: 40, hold: 1000, repeat: 1500, muted: false, players: [] };
+  var S = { layout: '4B', start: 40, hold: 800, repeat: 1500, muted: false, players: [] };
   function makePlayers(n) {
     var old = S.players, out = [];
     for (var i = 0; i < n; i++) out.push({ name: old[i] ? old[i].name : NAMES[i], color: old[i] ? old[i].color : PAL[i].c, life: S.start, cmd: [0, 0, 0, 0, 0], dead: false });
@@ -288,8 +288,18 @@ var APP_VERSION = '1.0.0';
   function wake() {
     if (navigator.wakeLock && !S.wl) navigator.wakeLock.request('screen').then(function (l) { S.wl = l; l.addEventListener('release', function () { S.wl = null; }); }).catch(function () {});
   }
-  document.addEventListener('pointerdown', function () { ac(); loadFarts(); wake(); }, { capture: true });
-  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { wake(); checkUpdate(); } });
+  // iPhone: play through the speaker even with the side switch on silent (iOS 17+)
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+  // iPhone only unlocks audio on touchend / click (not on pointerdown), so unlock there with a silent buffer
+  var unlocked = false;
+  function unlock() {
+    var c = ac(); loadFarts(); wake();
+    if (unlocked && c.state === 'running') return;
+    try { var b = c.createBuffer(1, 1, 22050), s = c.createBufferSource(); s.buffer = b; s.connect(c.destination); s.start(0); } catch (e) {}
+    if (c.state === 'running') unlocked = true;
+  }
+  ['pointerdown', 'touchend', 'click'].forEach(function (ev) { document.addEventListener(ev, unlock, { capture: true, passive: true }); });
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { unlocked = false; if (AC) AC.resume(); wake(); checkUpdate(); } });
   function playFart() {
     if (S.muted || !fartBuf) return;
     var seg = SEG[fartIdx]; fartIdx = (fartIdx + 1) % SEG.length;
