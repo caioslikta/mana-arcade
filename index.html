@@ -38,7 +38,9 @@ svg.pxi { display: block; }
 
 /* the whole device, minus notch / home indicator / rounded corners */
 .safe { position: fixed; inset: 0; box-sizing: border-box;
-  padding: calc(env(safe-area-inset-top, 0px) + 16px) max(4px, env(safe-area-inset-right, 0px)) max(14px, env(safe-area-inset-bottom, 0px)) max(4px, env(safe-area-inset-left, 0px)); }
+  padding: calc(env(safe-area-inset-top, 0px) + 26px) max(4px, env(safe-area-inset-right, 0px)) max(8px, calc(env(safe-area-inset-bottom, 0px) - 12px)) max(4px, env(safe-area-inset-left, 0px)); }
+/* phone turned sideways: the app turns back so it stays fixed to the phone, like a portrait lock */
+.safe.turned { inset: auto; top: 50%; left: 50%; }
 .screen { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; overflow: hidden; }
 .bar { flex: none; height: 38px; display: flex; justify-content: center; align-items: center; gap: 18px; }
 .bar button { width: 42px; height: 38px; background: none; border: 0; color: var(--green); opacity: .75; cursor: pointer; display: grid; place-items: center; padding: 0; }
@@ -76,7 +78,7 @@ svg.pxi { display: block; }
 .dead .life { animation: sink .8s steps(8) forwards; }
 .settled.dead .life { animation: none; visibility: hidden; }
 @keyframes sink { to { transform: translateY(80cqh); } }
-.delta { position: absolute; top: 0; right: 14cqw; font-family: var(--f-px); font-size: clamp(9px, min(3.6cqw, 7cqh), 15px); opacity: 0; transition: opacity 1.6s linear; }
+.delta { position: absolute; top: 0; right: 14cqw; font-family: var(--f-px); font-size: clamp(11px, min(4.4cqw, 8.5cqh), 18px); opacity: 0; transition: opacity 1.6s linear; }
 .delta.on { opacity: 1; transition: none; }
 .grave { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); color: var(--grave); visibility: hidden; }
 .dead .grave { visibility: visible; }
@@ -96,8 +98,10 @@ svg.pxi { display: block; }
 .cmdbtn .sl { color: var(--grave); margin: 0 .35em; }
 .dead .cmdbtn { visibility: hidden; }
 
-.edit { position: absolute; inset: 0; z-index: 7; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: min(5cqh, 18px); padding: 8px; }
-.edit input { font-family: var(--f-px); font-size: max(16px, min(4.4cqw, 9cqh)); color: var(--c); background: #000; border: 0; border-bottom: 3px solid var(--c); width: 11ch; text-align: center; text-transform: uppercase; padding: 4px 0; border-radius: 0; -webkit-user-select: text; user-select: text; }
+/* name editor: full screen, upright and in the top part so the keyboard never covers it */
+.edit { position: absolute; inset: 0; z-index: 25; background: #000; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; gap: 22px; padding: 7vh 16px 0; container-type: size; box-sizing: border-box; }
+.edit-t { font-family: var(--f-lab); font-size: 13px; color: var(--muted); }
+.edit input { font-family: var(--f-px); font-size: max(16px, min(5.2cqw, 9cqh)); color: var(--c); background: #000; border: 0; border-bottom: 3px solid var(--c); width: 11ch; text-align: center; text-transform: uppercase; padding: 4px 0; border-radius: 0; -webkit-user-select: text; user-select: text; }
 .edit input:focus { outline: none; }
 .swatches { display: flex; gap: min(3cqw, 12px); }
 .swatch { width: clamp(24px, min(9cqw, 17cqh), 40px); aspect-ratio: 1; padding: 4px; background: #000; border: 2px solid #000; cursor: pointer; }
@@ -167,7 +171,7 @@ svg.pxi { display: block; }
 </div></div>
 
 <script>
-var APP_VERSION = '1.0.1';
+var APP_VERSION = '1.0.2';
 (function () {
   // ---------- pixel art (always integer scale k) ----------
   function rects(rows, map) {
@@ -237,7 +241,7 @@ var APP_VERSION = '1.0.1';
     '3A': { a: ['a a', 'b c'], r: '1fr 2fr', rot: [180, 90, -90] },
     '3B': { a: ['a b', 'a c'], r: '1fr 1fr', rot: [90, -90, -90] },
     '4A': { a: ['a b', 'c d'], r: '1fr 1fr', rot: [90, -90, 90, -90] },
-    '4B': { a: ['a a', 'b c', 'd d'], r: '1fr 2fr 1fr', rot: [180, 90, -90, 0] },
+    '4B': { a: ['a a', 'b c', 'd d'], r: '1.15fr 1.7fr 1.15fr', rot: [180, 90, -90, 0] },
     '5A': { a: ['a a', 'b c', 'd e'], r: '1fr 1.5fr 1.5fr', rot: [180, 90, -90, 90, -90] },
     '5B': { a: ['a b', 'a b', 'c b', 'c d', 'e d', 'e d'], r: 'repeat(6, 1fr)', rot: [90, -90, 90, -90, 90] }
   };
@@ -617,16 +621,16 @@ var APP_VERSION = '1.0.1';
   // ---------- name + color ----------
   function openEdit(i) {
     var p = S.players[i], el = boxEl(i);
-    var ed = document.createElement('div'); ed.className = 'edit';
-    ed.innerHTML = '<input maxlength="10" value="' + esc(p.name) + '" aria-label="Nome" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done">' +
+    var ed = document.createElement('div'); ed.className = 'edit'; ed.style.setProperty('--c', p.color);
+    ed.innerHTML = '<span class="edit-t">NOME E COR</span><input maxlength="10" value="' + esc(p.name) + '" aria-label="Nome" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done">' +
       '<div class="swatches">' + PAL.map(function (c) { return '<button class="swatch" data-c="' + c.c + '" aria-label="' + c.n + '" aria-pressed="' + (c.c === p.color) + '"><i style="background:' + c.c + '"></i></button>'; }).join('') + '</div>' +
       '<button class="okbtn">OK</button>';
-    el.appendChild(ed);
-    var inp = ed.querySelector('input'); inp.focus(); inp.select();
+    screen.appendChild(ed);
+    var inp = ed.querySelector('input'); inp.focus(); inp.select(); window.scrollTo(0, 0);
     ed.querySelector('.swatches').addEventListener('click', function (e) {
       var b = e.target.closest('.swatch'); if (!b) return;
       ed.querySelectorAll('.swatch').forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
-      el.style.setProperty('--c', b.dataset.c);
+      el.style.setProperty('--c', b.dataset.c); ed.style.setProperty('--c', b.dataset.c);
     });
     function done() {
       p.name = (inp.value.trim() || 'JOGADOR').toUpperCase().slice(0, 10);
@@ -728,6 +732,28 @@ var APP_VERSION = '1.0.1';
     }).catch(function () {});
   }
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(function () {});
+
+  // ---------- portrait lock: iPhone ignores the manifest, so when the phone lies sideways the app turns back ----------
+  var safeEl = document.querySelector('.safe'), INS = ['86px', '22px'];
+  try { var si = JSON.parse(localStorage.getItem('mana-arcade-insets') || 'null'); if (si) INS = si; } catch (e) {}
+  function orient() {
+    var land = window.innerWidth > window.innerHeight && window.matchMedia('(pointer: coarse)').matches;
+    if (!land) {
+      safeEl.classList.remove('turned'); safeEl.removeAttribute('style');
+      var cs = getComputedStyle(safeEl); INS = [cs.paddingTop, cs.paddingBottom];
+      try { localStorage.setItem('mana-arcade-insets', JSON.stringify(INS)); } catch (e) {}
+      return;
+    }
+    var a = typeof window.orientation === 'number' ? window.orientation : (window.screen.orientation ? window.screen.orientation.angle : 90);
+    a = ((a % 360) + 360) % 360;
+    safeEl.classList.add('turned');
+    safeEl.style.width = window.innerHeight + 'px'; safeEl.style.height = window.innerWidth + 'px';
+    safeEl.style.padding = INS[0] + ' 4px ' + INS[1] + ' 4px';
+    safeEl.style.transform = 'translate(-50%, -50%) rotate(' + (a === 90 ? -90 : 90) + 'deg)';
+  }
+  window.addEventListener('resize', orient);
+  window.addEventListener('orientationchange', function () { setTimeout(orient, 120); });
+  orient();
 
   renderBar();
   renderScreen();
