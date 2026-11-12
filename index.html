@@ -38,7 +38,7 @@ svg.pxi { display: block; }
 
 /* the whole device, minus notch / home indicator / rounded corners */
 .safe { position: fixed; inset: 0; box-sizing: border-box;
-  padding: calc(env(safe-area-inset-top, 0px) + 26px) max(4px, env(safe-area-inset-right, 0px)) max(8px, calc(env(safe-area-inset-bottom, 0px) - 12px)) max(4px, env(safe-area-inset-left, 0px)); }
+  padding: calc(env(safe-area-inset-top, 0px) + 26px) max(4px, env(safe-area-inset-right, 0px)) max(6px, calc(env(safe-area-inset-bottom, 0px) - 22px)) max(4px, env(safe-area-inset-left, 0px)); }
 /* phone turned sideways: the app turns back so it stays fixed to the phone, like a portrait lock */
 .safe.turned { inset: auto; top: 50%; left: 50%; }
 .screen { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; overflow: hidden; }
@@ -161,6 +161,10 @@ svg.pxi { display: block; }
 .mini { width: 62px; aspect-ratio: 9 / 19.5; border: 2px solid #33333F; border-radius: 9px; padding: 3px; display: grid; gap: 2px; }
 .mini div { border: 2px solid var(--cc); display: grid; place-items: center; min-height: 0; min-width: 0; }
 .mini span { font-family: var(--f-px); font-size: 7px; color: var(--cc); }
+.info-stage { position: relative; width: 150px; height: 150px; overflow: hidden; }
+.info-stage .grave { visibility: visible; bottom: 18px; }
+.info-stage .grave .rise { transform: none; }
+.info-stage .ground { visibility: visible; top: auto; bottom: 0; }
 @media (prefers-reduced-motion: reduce) { .pbox[data-alert] .glow, .cmdbtn[data-lvl] { animation-duration: 6s; } }
 </style>
 </head>
@@ -171,7 +175,7 @@ svg.pxi { display: block; }
 </div></div>
 
 <script>
-var APP_VERSION = '1.0.2';
+var APP_VERSION = '1.0.3';
 (function () {
   // ---------- pixel art (always integer scale k) ----------
   function rects(rows, map) {
@@ -206,6 +210,7 @@ var APP_VERSION = '1.0.2';
     sound: ['...#....', '..##.#..', '####..#.', '####.#.#', '####.#.#', '####..#.', '..##.#..', '...#....'],
     mute: ['...#....', '..##....', '####.#.#', '####..#.', '####..#.', '####.#.#', '..##....', '...#....'],
     swords: ['#.......#', '.#.....#.', '..#...#..', '...#.#...', '....#....', '...#.#...', '#.#...#.#', '.#.....#.', '#.#...#.#'],
+    info: ['..#..', '.....', '.##..', '..#..', '..#..', '..#..', '..#..', '.###.'],
     pencil: ['......##', '.....###', '....###.', '...###..', '..###...', '.###....', '#.#.....', '##......']
   };
   var TOMB = ['..#######..', '.#########.', '###########', '#####.#####', '#####.#####', '###.....###', '#####.#####', '#####.#####', '#####.#####', '#####.#####', '###########', '###########', '###########'];
@@ -241,7 +246,7 @@ var APP_VERSION = '1.0.2';
     '3A': { a: ['a a', 'b c'], r: '1fr 2fr', rot: [180, 90, -90] },
     '3B': { a: ['a b', 'a c'], r: '1fr 1fr', rot: [90, -90, -90] },
     '4A': { a: ['a b', 'c d'], r: '1fr 1fr', rot: [90, -90, 90, -90] },
-    '4B': { a: ['a a', 'b c', 'd d'], r: '1.15fr 1.7fr 1.15fr', rot: [180, 90, -90, 0] },
+    '4B': { a: ['a a', 'b c', 'd d'], r: '1.1fr 1.95fr 1.1fr', rot: [180, 90, -90, 0] },
     '5A': { a: ['a a', 'b c', 'd e'], r: '1fr 1.5fr 1.5fr', rot: [180, 90, -90, 90, -90] },
     '5B': { a: ['a b', 'a b', 'c b', 'c d', 'e d', 'e d'], r: 'repeat(6, 1fr)', rot: [90, -90, 90, -90, 90] }
   };
@@ -282,7 +287,13 @@ var APP_VERSION = '1.0.2';
   var AC = null, fartBuf = null, fartIdx = 0, lastFart = null;
   // start/end (s) of the six chosen sounds inside your file: 1-5 and 7
   var SEG = [[0.67, 0.86], [1.18, 1.38], [1.76, 1.93], [3.08, 3.28], [3.51, 3.71], [5.47, 5.68]];
-  function ac() { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended' || AC.state === 'interrupted') AC.resume(); return AC; }
+  function ac() {
+    if (!AC || AC.state === 'closed') AC = new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state !== 'running') { var p = AC.resume(); if (p && p.catch) p.catch(function () {}); }
+    return AC;
+  }
+  // iPhone sometimes leaves the audio stuck after the app goes to the background; throw it away and make a new one
+  function dropAudio() { if (AC) { try { AC.close(); } catch (e) {} } AC = null; lastFart = null; }
   function loadFarts() {
     if (fartBuf || loadFarts.busy) return; loadFarts.busy = true;
     fetch('farts.mp3').then(function (r) { return r.arrayBuffer(); }).then(function (b) {
@@ -300,10 +311,14 @@ var APP_VERSION = '1.0.2';
     var c = ac(); loadFarts(); wake();
     if (unlocked && c.state === 'running') return;
     try { var b = c.createBuffer(1, 1, 22050), s = c.createBufferSource(); s.buffer = b; s.connect(c.destination); s.start(0); } catch (e) {}
-    if (c.state === 'running') unlocked = true;
+    if (c.state === 'running') { unlocked = true; return; }
+    setTimeout(function () { if (AC === c && c.state !== 'running') dropAudio(); }, 400);
   }
   ['pointerdown', 'touchend', 'click'].forEach(function (ev) { document.addEventListener(ev, unlock, { capture: true, passive: true }); });
-  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { unlocked = false; if (AC) AC.resume(); wake(); checkUpdate(); } });
+  document.addEventListener('visibilitychange', function () {
+    unlocked = false;
+    if (document.visibilityState === 'visible') { if (AC && AC.state !== 'running') dropAudio(); wake(); checkUpdate(); }
+  });
   function playFart() {
     if (S.muted || !fartBuf) return;
     var seg = SEG[fartIdx]; fartIdx = (fartIdx + 1) % SEG.length;
@@ -342,7 +357,8 @@ var APP_VERSION = '1.0.2';
     bar.innerHTML = '<button data-a="reset" aria-label="Reiniciar">' + px(I.reset, 2) + '</button>' +
       '<button data-a="players" aria-label="Jogadores e layout">' + px(I.players, 2) + '</button>' +
       '<button data-a="life" aria-label="Vida inicial">' + px(I.heart, 2) + '</button>' +
-      '<button data-a="sound" aria-label="Som">' + px(S.muted ? I.mute : I.sound, 2) + '</button>';
+      '<button data-a="sound" aria-label="Som">' + px(S.muted ? I.mute : I.sound, 2) + '</button>' +
+      '<button data-a="info" aria-label="Sobre o app">' + px(I.info, 2) + '</button>';
   }
   bar.addEventListener('click', function (e) {
     var b = e.target.closest('button'); if (!b) return;
@@ -691,12 +707,26 @@ var APP_VERSION = '1.0.2';
       panel = '<h4>' + px(I.heart, 2) + 'VIDA INICIAL</h4><div class="nums">' + [20, 25, 30, 40].map(function (v) { return '<button class="num" data-v="' + v + '" aria-pressed="' + (v === S.start) + '">' + v + '</button>'; }).join('') + '</div>' +
         '<div class="stepper"><button class="sq" data-s="-1" aria-label="Menos">' + px(I.minus, 2) + '</button><output>' + S.start + '</output><button class="sq" data-s="1" aria-label="Mais">' + px(I.plus, 2) + '</button></div>' +
         '<p>Aplicar reinicia a partida.</p><div class="row-btns"><button class="pbtn" data-x="close">CANCELAR</button><button class="pbtn main" data-x="life">APLICAR</button></div>';
+    } else if (kind === 'info') {
+      panel = '<h4>' + px(I.info, 2) + 'MANA ARCADE</h4><p>versão ' + APP_VERSION + '</p>' +
+        '<div class="info-stage">' + graveSVG() + groundSVG(22, 5) + '</div>' +
+        '<p>© 2026 Caio Slikta</p><div class="row-btns"><button class="pbtn main" data-x="close">FECHAR</button></div>';
     } else {
       panel = '<h4>' + px(I.players, 2) + 'JOGADORES</h4><div class="nums">' + [2, 3, 4, 5].map(function (v) { return '<button class="num" data-n="' + v + '" aria-pressed="' + (v === S.players.length) + '">' + v + '</button>'; }).join('') + '</div>' +
         '<div class="thumbs"></div><p>Trocar o layout mantém a partida. Trocar a quantidade reinicia.</p><div class="row-btns"><button class="pbtn" data-x="close">CANCELAR</button><button class="pbtn main" data-x="players">OK</button></div>';
     }
     m.innerHTML = '<div class="panel">' + panel + '</div>';
     screen.appendChild(m);
+    if (kind === 'info') {
+      // the same crow as the graveyard: flies onto the tomb, then pecks, hops and turns while the screen is open
+      var gs = m.querySelector('.grave'); gs.setAttribute('width', 90); gs.setAttribute('height', 120);
+      setK(m.querySelector('.ground'), 6);
+      (function crowShow() {
+        flyIn(gs, 300, function loop() {
+          gs._act = setTimeout(function () { if (!m.isConnected) return; crowAct(gs, randomAct()); loop(); }, 2500 + Math.random() * 3000);
+        });
+      })();
+    }
     var pickLife = S.start, pickN = S.players.length, pickLay = S.layout;
     function thumbs() {
       var t = m.querySelector('.thumbs'); if (!t) return;
