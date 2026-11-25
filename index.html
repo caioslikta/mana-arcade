@@ -78,7 +78,7 @@ svg.pxi { display: block; }
 .dead .life { animation: sink .8s steps(8) forwards; }
 .settled.dead .life { animation: none; visibility: hidden; }
 @keyframes sink { to { transform: translateY(80cqh); } }
-.delta { position: absolute; top: 0; right: 14cqw; font-family: var(--f-px); font-size: clamp(11px, min(4.4cqw, 8.5cqh), 18px); opacity: 0; transition: opacity 1.6s linear; }
+.delta { position: absolute; top: 0; right: 14cqw; font-family: var(--f-px); font-size: clamp(13px, min(5.4cqw, 10cqh), 22px); opacity: 0; transition: opacity 1.6s linear; }
 .delta.on { opacity: 1; transition: none; }
 .grave { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); color: var(--grave); visibility: hidden; }
 .dead .grave { visibility: visible; }
@@ -92,7 +92,7 @@ svg.pxi { display: block; }
 .dead .ground { visibility: visible; }
 .fx { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 4; }
 .cmdbtn { position: absolute; left: 50%; bottom: 4cqh; transform: translateX(-50%); z-index: 3; display: flex; align-items: center; gap: .7em; background: none; border: 0; cursor: pointer;
-  color: var(--cmdc, var(--grave)); font-family: var(--f-px); font-size: clamp(9px, min(3.6cqw, 7cqh), 15px); padding: .8em 1.4em; }
+  color: var(--cmdc, var(--grave)); font-family: var(--f-px); font-size: clamp(11px, min(4.4cqw, 8.5cqh), 18px); padding: .8em 1.4em; }
 .cmdbtn[data-lvl] svg { animation: breathe var(--cspd) ease-in-out infinite; }
 .cmdbtn .badge { color: var(--grave); }
 .cmdbtn .sl { color: var(--grave); margin: 0 .35em; }
@@ -175,7 +175,7 @@ svg.pxi { display: block; }
 </div></div>
 
 <script>
-var APP_VERSION = '1.0.3';
+var APP_VERSION = '1.0.4';
 (function () {
   // ---------- pixel art (always integer scale k) ----------
   function rects(rows, map) {
@@ -245,10 +245,12 @@ var APP_VERSION = '1.0.3';
     '2B': { a: ['a b'], r: '1fr', rot: [90, -90] },
     '3A': { a: ['a a', 'b c'], r: '1fr 2fr', rot: [180, 90, -90] },
     '3B': { a: ['a b', 'a c'], r: '1fr 1fr', rot: [90, -90, -90] },
+    '3C': { a: ['b c', 'a a'], r: '2fr 1fr', rot: [0, 90, -90] },
     '4A': { a: ['a b', 'c d'], r: '1fr 1fr', rot: [90, -90, 90, -90] },
     '4B': { a: ['a a', 'b c', 'd d'], r: '1.1fr 1.95fr 1.1fr', rot: [180, 90, -90, 0] },
     '5A': { a: ['a a', 'b c', 'd e'], r: '1fr 1.5fr 1.5fr', rot: [180, 90, -90, 90, -90] },
-    '5B': { a: ['a b', 'a b', 'c b', 'c d', 'e d', 'e d'], r: 'repeat(6, 1fr)', rot: [90, -90, 90, -90, 90] }
+    '5B': { a: ['a b', 'a b', 'c b', 'c d', 'e d', 'e d'], r: 'repeat(6, 1fr)', rot: [90, -90, 90, -90, 90] },
+    '5C': { a: ['b c', 'd e', 'a a'], r: '1.5fr 1.5fr 1fr', rot: [0, 90, -90, 90, -90] }
   };
   function L(i) { return String.fromCharCode(97 + i); }
 
@@ -375,7 +377,7 @@ var APP_VERSION = '1.0.3';
       '<div class="head"><span class="pname">' + esc(p.name) + '</span><button class="editbtn" aria-label="Editar nome e cor">' + px(I.pencil, 2, 'k-sm', r) + '</button></div>' +
       '<div class="lifezone"><div class="life"></div><div class="delta"></div>' + graveSVG() + '</div>' +
       '<div class="groundslot"></div>' +
-      '<button class="cmdbtn" aria-label="Commander damage">' + px(I.swords, 2, 'k-sm', r) + '<span class="badge">0</span></button>' +
+      '<button class="cmdbtn" aria-label="Commander damage">' + px(I.swords, 2, 'k-cmd', r) + '<span class="badge">0</span></button>' +
       '</div></div>';
   }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
@@ -414,6 +416,7 @@ var APP_VERSION = '1.0.3';
     var u = Math.max(1, Math.floor(Math.min(W / 120, H / 70)));
     el.querySelectorAll('.k-pm').forEach(function (s) { setK(s, Math.max(2, u)); });
     el.querySelectorAll('.k-sm').forEach(function (s) { setK(s, u >= 2 ? 2 : 1); });
+    el.querySelectorAll('.k-cmd').forEach(function (s) { setK(s, u >= 3 ? 3 : 2); });
     var zoneH = H * 0.65, kg = Math.max(2, Math.floor(zoneH * 0.88 / 20));
     var g = el.querySelector('.grave'); g.setAttribute('width', 15 * kg); g.setAttribute('height', 20 * kg);
     var cols = Math.max(15, Math.floor(W * 0.74 / kg));
@@ -465,9 +468,9 @@ var APP_VERSION = '1.0.3';
     p._acc = (p._acc || 0) + v - prev;
     d.textContent = (p._acc > 0 ? '+' : '') + p._acc; d.style.color = p._acc > 0 ? '#00E436' : '#FF5A66';
     d.classList.toggle('on', p._acc !== 0);
-    // stays up 3 s so the table can see it, then fades slowly (CSS) and resets after the fade
+    // stays up 5 s so the table can see it, then fades slowly (CSS) and resets after the fade
     clearTimeout(p._dt); clearTimeout(p._dt2);
-    p._dt = setTimeout(function () { d.classList.remove('on'); p._dt2 = setTimeout(function () { p._acc = 0; }, 1600); }, 3000);
+    p._dt = setTimeout(function () { d.classList.remove('on'); p._dt2 = setTimeout(function () { p._acc = 0; }, 1600); }, 5000);
     update(i);
   }
   function shake(el) {
@@ -731,7 +734,7 @@ var APP_VERSION = '1.0.3';
     function thumbs() {
       var t = m.querySelector('.thumbs'); if (!t) return;
       if (pickLay[0] !== String(pickN)) pickLay = pickN + 'A';
-      t.innerHTML = ['A', 'B'].map(function (k) { var key = pickN + k; return '<button class="thumb" data-l="' + key + '" aria-pressed="' + (key === pickLay) + '">' + mini(key) + key + '</button>'; }).join('');
+      t.innerHTML = ['A', 'B', 'C'].filter(function (k) { return LAY[pickN + k]; }).map(function (k) { var key = pickN + k; return '<button class="thumb" data-l="' + key + '" aria-pressed="' + (key === pickLay) + '">' + mini(key) + key + '</button>'; }).join('');
     }
     thumbs();
     m.addEventListener('click', function (e) {
