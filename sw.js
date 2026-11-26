@@ -1,5 +1,5 @@
 ﻿// Network first (so new versions show up right away), cache as fallback (so it works offline at the table).
-var CACHE = 'mana-arcade-v5';
+var CACHE = 'mana-arcade-v6';
 var CORE = ['./', 'index.html', 'farts.mp3', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', function (e) {
