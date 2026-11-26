@@ -71,14 +71,14 @@ svg.pxi { display: block; }
 .head { position: absolute; top: 6cqh; left: 0; right: 0; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; z-index: 3; pointer-events: none; }
 .pname { grid-column: 2; font-family: var(--f-px); font-size: clamp(9px, min(4.4cqw, 8.5cqh), 20px); color: var(--c); line-height: 1; white-space: nowrap; }
 .editbtn { grid-column: 3; justify-self: start; pointer-events: auto; background: none; border: 0; color: var(--grave); padding: 2cqh 2.4cqw; cursor: pointer; }
-.lifezone { position: absolute; left: 0; right: 0; top: 19cqh; bottom: 16cqh; padding-bottom: 5cqh; overflow: hidden; z-index: 2; pointer-events: none; display: grid; place-items: center; }
+.lifezone { position: absolute; left: 0; right: 0; top: 0; bottom: 16cqh; padding-bottom: 5cqh; overflow: hidden; z-index: 2; pointer-events: none; display: grid; place-items: center; }
 .life { font-family: 'Jersey 10', var(--f-px); font-size: min(calc(110cqw / var(--d)), 72cqh); color: #F4F2EA; line-height: 1; }
 .life.shake { animation: shake .22s steps(1) 1; }
 @keyframes shake { 0% { transform: translateX(0); } 20% { transform: translateX(-1.2cqw); } 40% { transform: translateX(1.2cqw); } 60% { transform: translateX(-.7cqw); } 80% { transform: translateX(.7cqw); } 100% { transform: translateX(0); } }
 .dead .life { animation: sink .8s steps(8) forwards; }
 .settled.dead .life { animation: none; visibility: hidden; }
 @keyframes sink { to { transform: translateY(80cqh); } }
-.delta { position: absolute; top: 0; right: 14cqw; font-family: var(--f-px); font-size: clamp(13px, min(5.4cqw, 10cqh), 22px); opacity: 0; transition: opacity 1.6s linear; }
+.delta { position: absolute; top: 19cqh; right: 14cqw; font-family: var(--f-px); font-size: clamp(13px, min(5.4cqw, 10cqh), 22px); opacity: 0; transition: opacity 1.6s linear; }
 .delta.on { opacity: 1; transition: none; }
 .grave { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); color: var(--grave); visibility: hidden; }
 .dead .grave { visibility: visible; }
@@ -188,7 +188,7 @@ svg.pxi { display: block; }
 </div></div>
 
 <script>
-var APP_VERSION = '1.0.6';
+var APP_VERSION = '1.0.7';
 (function () {
   // ---------- pixel art (always integer scale k) ----------
   function rects(rows, map) {
@@ -322,19 +322,25 @@ var APP_VERSION = '1.0.6';
   // iPhone: play through the speaker even with the side switch on silent (iOS 17+)
   try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
   // iPhone only unlocks audio on touchend / click (not on pointerdown), so unlock there with a silent buffer
-  var unlocked = false;
-  function unlock() {
-    var c = ac(); loadFarts(); wake();
-    if (unlocked && c.state === 'running') return;
-    try { var b = c.createBuffer(1, 1, 22050), s = c.createBufferSource(); s.buffer = b; s.connect(c.destination); s.start(0); } catch (e) {}
-    if (c.state === 'running') { unlocked = true; return; }
-    setTimeout(function () { if (AC === c && c.state !== 'running') dropAudio(); }, 400);
+  // The keyboard (name screen), calls, Siri or going to the background can leave the audio "interrupted" for good.
+  // Recovery always happens inside a touchend/click, the only events where iPhone lets a page start audio:
+  // first try to resume the context, and if that already failed once, replace it with a brand new one.
+  function blip(c) { try { var b = c.createBuffer(1, 1, 22050), s = c.createBufferSource(); s.buffer = b; s.connect(c.destination); s.start(0); } catch (e) {} }
+  function unlock(e) {
+    try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch (er) {}
+    wake();
+    if (AC && AC.state === 'running') { loadFarts(); return; }
+    if (e.type === 'pointerdown') return;
+    if (AC && AC.state === 'suspended' && !AC._tried) { AC._tried = true; ac(); }
+    else { dropAudio(); ac(); AC._tried = true; }
+    blip(AC); loadFarts();
   }
   ['pointerdown', 'touchend', 'click'].forEach(function (ev) { document.addEventListener(ev, unlock, { capture: true, passive: true }); });
   document.addEventListener('visibilitychange', function () {
-    unlocked = false;
     if (document.visibilityState === 'visible') { if (AC && AC.state !== 'running') dropAudio(); wake(); checkUpdate(); }
   });
+  // leaving a text field (keyboard closes) is when iPhone most often breaks the audio: start clean on the next tap
+  document.addEventListener('focusout', function (e) { if (e.target.tagName === 'INPUT' && AC && AC.state !== 'running') dropAudio(); });
   function playFart() {
     if (S.muted || !fartBuf) return;
     var seg = SEG[fartIdx]; fartIdx = (fartIdx + 1) % SEG.length;
@@ -479,22 +485,49 @@ var APP_VERSION = '1.0.6';
   // Jersey 10 has a tall line box and uneven side bearings, so measure the real ink of the digits
   // and shift the number until the ink (not the font box) sits dead centre.
   var mctx = document.createElement('canvas').getContext('2d');
-  function inkOf(txt, F) {
-    mctx.font = F + "px 'Jersey 10'";
-    var m = mctx.measureText(txt), fa = m.fontBoundingBoxAscent || F * .8, fd = m.fontBoundingBoxDescent || F * .2;
-    var base = (F - (fa + fd)) / 2 + fa;
-    return { w: m.width, l: -m.actualBoundingBoxLeft, r: m.actualBoundingBoxRight, t: base - m.actualBoundingBoxAscent, b: base + m.actualBoundingBoxDescent };
+  // measured at 1000 px and scaled, because small sizes return metrics rounded to whole pixels
+  function inkOf(txt, F, fam) {
+    mctx.font = "1000px '" + (fam || 'Jersey 10') + "'";
+    var m = mctx.measureText(txt), s = F / 1000, fa = m.fontBoundingBoxAscent != null ? m.fontBoundingBoxAscent : 800, fd = m.fontBoundingBoxDescent != null ? m.fontBoundingBoxDescent : 200;
+    var base = (1000 - (fa + fd)) / 2 + fa;
+    return { w: m.width * s, l: -m.actualBoundingBoxLeft * s, r: m.actualBoundingBoxRight * s, t: (base - m.actualBoundingBoxAscent) * s, b: (base + m.actualBoundingBoxDescent) * s };
   }
-  // size the number to the band between the name and the commander row, then centre its ink in that band
+  // [top, bottom] of a child in the box's own (unrotated) coordinates, with sub-pixel precision
+  function localY(box, child) {
+    var b = box.getBoundingClientRect(), c = child.getBoundingClientRect(), rot = LAY[S.layout].rot[+box.dataset.i] || 0;
+    if (rot === 180) return [b.bottom - c.bottom, b.bottom - c.top];
+    if (rot === 90) return [b.right - c.right, b.right - c.left];
+    if (rot === -90) return [c.left - b.left, c.right - b.left];
+    return [c.top - b.top, c.bottom - b.top];
+  }
+  // Everything is placed by its visible ink, not by font boxes or button padding:
+  // - the commander row sits as far from the bottom edge as the name's letters sit from the top edge
+  // - the life number is centred between the name's letters and the commander row, same gap above and below
   function centerLife(el) {
     var life = el.querySelector('.life'), txt = life.textContent; if (!txt) return;
-    var zone = el.querySelector('.lifezone'), cb = el.querySelector('.cmdbtn');
-    var bandTop = 4, bandBot = cb.offsetTop - zone.offsetTop - 6, k1 = inkOf(txt, 100);
-    var F = Math.max(10, Math.floor(Math.min(1.12 * el.clientWidth / Math.max(2, txt.length), (bandBot - bandTop) / ((k1.b - k1.t) / 100))));
-    life.style.fontSize = F + 'px';
-    var k = inkOf(txt, F);
-    life._cy = (bandTop + bandBot) / 2;
-    life.style.translate = (k.w / 2 - (k.l + k.r) / 2).toFixed(1) + 'px ' + (life._cy - life.offsetTop - (k.t + k.b) / 2).toFixed(1) + 'px';
+    var zone = el.querySelector('.lifezone'), cb = el.querySelector('.cmdbtn'), H = el.clientHeight;
+    var pn = el.querySelector('.pname'), nf = parseFloat(getComputedStyle(pn).fontSize);
+    var kn = inkOf(pn.textContent || 'A', nf, 'Press Start 2P'), nTop = localY(el, pn)[0];
+    var nameInkTop = nTop + kn.t, nameInkBot = nTop + kn.b;
+    // commander row: swords (9 px x kc) and digits, centred in the button's line
+    var cf = parseFloat(cb.style.fontSize) || 21, bd = cb.querySelector('.badge'), sv = cb.querySelector('svg');
+    var kb = inkOf(bd.textContent || '0', cf, 'Press Start 2P');
+    function cdInk() {
+      var s = localY(el, sv), b = localY(el, bd);
+      return [Math.min(s[0], b[0] + kb.t), Math.max(s[1], b[0] + kb.b)];
+    }
+    var bottom = parseFloat(cb.style.bottom); if (isNaN(bottom)) bottom = H * 0.04;
+    cb.style.bottom = bottom + 'px';
+    var ci = cdInk(), up = nameInkTop - (H - ci[1]);   // move up/down until it is as far from the edge as the name
+    bottom += up;
+    cb.style.bottom = bottom.toFixed(2) + 'px';
+    var cdTop = ci[0] - up;
+    // life number: as big as fits with a fair gap on both sides, then centred
+    var gap = Math.max(8, H * 0.07), k1 = inkOf(txt, 100);
+    var F = Math.max(10, Math.floor(Math.min(1.12 * el.clientWidth / Math.max(2, txt.length), (cdTop - nameInkBot - 2 * gap) / ((k1.b - k1.t) / 100))));
+    life.style.fontSize = F + 'px'; life.style.translate = '0px 0px';
+    var k = inkOf(txt, F), cy = (nameInkBot + cdTop) / 2, lt = localY(el, life)[0];    life._cy = cy - localY(el, zone)[0];
+    life.style.translate = (k.w / 2 - (k.l + k.r) / 2).toFixed(2) + 'px ' + (cy - lt - (k.t + k.b) / 2).toFixed(2) + 'px';
   }
   // where the digits actually are, in lifezone coordinates
   function inkRect(el) {
@@ -502,7 +535,7 @@ var APP_VERSION = '1.0.6';
     var w = k.r - k.l, h = k.b - k.t, cx = life.offsetLeft + life.offsetWidth / 2, cy = life._cy != null ? life._cy : life.offsetTop + F / 2;
     return { x: cx - w / 2, y: cy - h / 2, w: w, h: h, cx: cx, cy: cy, F: F };
   }
-  if (document.fonts && document.fonts.load) document.fonts.load("10px 'Jersey 10'").then(function () { grid.querySelectorAll('.pbox').forEach(centerLife); });
+  if (document.fonts && document.fonts.load) Promise.all([document.fonts.load("10px 'Jersey 10'"), document.fonts.load("10px 'Press Start 2P'")]).then(function () { grid.querySelectorAll('.pbox').forEach(centerLife); });
   function setLife(i, v, silent) {
     var p = S.players[i]; v = Math.max(0, v);
     var prev = p.life; if (v === prev) return;
