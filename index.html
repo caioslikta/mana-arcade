@@ -72,7 +72,7 @@ svg.pxi { display: block; }
 .pname { grid-column: 2; font-family: var(--f-px); font-size: clamp(9px, min(4.4cqw, 8.5cqh), 20px); color: var(--c); line-height: 1; white-space: nowrap; }
 .editbtn { grid-column: 3; justify-self: start; pointer-events: auto; background: none; border: 0; color: var(--grave); padding: 2cqh 2.4cqw; cursor: pointer; }
 .lifezone { position: absolute; left: 0; right: 0; top: 19cqh; bottom: 16cqh; padding-bottom: 5cqh; overflow: hidden; z-index: 2; pointer-events: none; display: grid; place-items: center; }
-.life { font-family: 'Jersey 10', var(--f-px); font-size: min(calc(104cqw / var(--d)), 68cqh); color: #F4F2EA; line-height: 1; }
+.life { font-family: 'Jersey 10', var(--f-px); font-size: min(calc(110cqw / var(--d)), 72cqh); color: #F4F2EA; line-height: 1; }
 .life.shake { animation: shake .22s steps(1) 1; }
 @keyframes shake { 0% { transform: translateX(0); } 20% { transform: translateX(-1.2cqw); } 40% { transform: translateX(1.2cqw); } 60% { transform: translateX(-.7cqw); } 80% { transform: translateX(.7cqw); } 100% { transform: translateX(0); } }
 .dead .life { animation: sink .8s steps(8) forwards; }
@@ -92,7 +92,7 @@ svg.pxi { display: block; }
 .dead .ground { visibility: visible; }
 .fx { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 4; }
 .cmdbtn { position: absolute; left: 50%; bottom: 4cqh; transform: translateX(-50%); z-index: 3; display: flex; align-items: center; gap: .7em; background: none; border: 0; cursor: pointer;
-  color: var(--cmdc, var(--grave)); font-family: var(--f-px); font-size: clamp(11px, min(4.4cqw, 8.5cqh), 18px); padding: .8em 1.4em; }
+  color: var(--cmdc, var(--grave)); font-family: var(--f-px); font-size: 21px; padding: .5em 1em; line-height: 1; }
 .cmdbtn[data-lvl] svg { animation: breathe var(--cspd) ease-in-out infinite; }
 .cmdbtn .badge { color: var(--grave); }
 .cmdbtn .sl { color: var(--grave); margin: 0 .35em; }
@@ -108,6 +108,19 @@ svg.pxi { display: block; }
 .swatch i { display: block; width: 100%; height: 100%; }
 .swatch[aria-pressed="true"] { border-color: #F4F2EA; }
 .okbtn { font-family: var(--f-px); font-size: clamp(9px, min(3.4cqw, 7cqh), 12px); color: #000; background: var(--c); border: 0; padding: .9em 1.6em; cursor: pointer; }
+/* saved names: tap one to use it, + to add, trash (with confirmation) to remove */
+.saved { width: 100%; max-width: 380px; flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 6px 0 24px; border-top: 2px dashed #26262E; margin-top: 4px; }
+.saved-t { font-family: var(--f-lab); font-size: 12px; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.chip { display: flex; align-items: stretch; border: 2px solid var(--line2); background: #000; }
+.chip-n { font-family: var(--f-px); font-size: 11px; color: var(--fg); background: none; border: 0; padding: 11px 10px 11px 12px; cursor: pointer; line-height: 1; }
+.chip-n:active { color: var(--c); }
+.chip-x { background: none; border: 0; border-left: 2px solid var(--line2); color: var(--muted); padding: 0 10px; cursor: pointer; display: grid; place-items: center; }
+.chip-x:active { color: #FF2E3B; }
+.chip-add { border: 2px dashed var(--c); color: var(--c); background: none; width: 40px; cursor: pointer; display: grid; place-items: center; padding: 0; min-height: 37px; }
+.modal.top { place-items: start center; padding-top: 9vh; }
+.panel input { font-family: var(--f-px); font-size: 16px; color: var(--green); background: #000; border: 0; border-bottom: 3px solid var(--green); width: 11ch; text-align: center; text-transform: uppercase; padding: 4px 0; border-radius: 0; -webkit-user-select: text; user-select: text; }
+.panel input:focus { outline: none; }
 
 /* ---------- full-screen layers ---------- */
 .layer { position: absolute; inset: 0; z-index: 20; background: #000; }
@@ -175,7 +188,7 @@ svg.pxi { display: block; }
 </div></div>
 
 <script>
-var APP_VERSION = '1.0.5';
+var APP_VERSION = '1.0.6';
 (function () {
   // ---------- pixel art (always integer scale k) ----------
   function rects(rows, map) {
@@ -211,6 +224,7 @@ var APP_VERSION = '1.0.5';
     mute: ['...#....', '..##....', '####.#.#', '####..#.', '####..#.', '####.#.#', '..##....', '...#....'],
     swords: ['#.......#', '.#.....#.', '..#...#..', '...#.#...', '....#....', '...#.#...', '#.#...#.#', '.#.....#.', '#.#...#.#'],
     info: ['..#..', '.....', '.##..', '..#..', '..#..', '..#..', '..#..', '.###.'],
+    trash: ['..###..', '#######', '.......', '.#####.', '.#.#.#.', '.#.#.#.', '.#.#.#.', '.#####.'],
     pencil: ['......##', '.....###', '....###.', '...###..', '..###...', '.###....', '#.#.....', '##......']
   };
   var TOMB = ['..#######..', '.#########.', '###########', '#####.#####', '#####.#####', '###.....###', '#####.#####', '#####.#####', '#####.#####', '#####.#####', '###########', '###########', '###########'];
@@ -412,11 +426,15 @@ var APP_VERSION = '1.0.5';
     el.style.transform = 'rotate(' + rot + 'deg)';
     return [bw, bh];
   }
-  function fitBox(el, W, H) {
+  function cmdK(W, H) { return Math.max(2, Math.min(4, Math.floor(Math.min(W / 110, H / 60)))); }
+  function fitBox(el, W, H, kc) {
     var u = Math.max(1, Math.floor(Math.min(W / 120, H / 70)));
     el.querySelectorAll('.k-pm').forEach(function (s) { setK(s, Math.max(2, u)); });
     el.querySelectorAll('.k-sm').forEach(function (s) { setK(s, u >= 2 ? 2 : 1); });
-    el.querySelectorAll('.k-cmd').forEach(function (s) { setK(s, u >= 3 ? 3 : 2); });
+    // commander: swords are 9 px tall at scale kc, and the digits (7 of 8 font rows) are sized to the same height
+    el.querySelectorAll('.k-cmd').forEach(function (s) { setK(s, kc); });
+    var cf = Math.round(kc * 9 * 8 / 7), cb = el.querySelector('.cmdbtn');
+    cb.style.fontSize = cf + 'px';
     var zoneH = H * 0.65, kg = Math.max(2, Math.floor(zoneH * 0.88 / 20));
     var g = el.querySelector('.grave'); g.setAttribute('width', 15 * kg); g.setAttribute('height', 20 * kg);
     var cols = Math.max(15, Math.floor(W * 0.74 / kg));
@@ -447,10 +465,10 @@ var APP_VERSION = '1.0.5';
   }
   function layout() {
     var rot = LAY[S.layout].rot;
-    grid.querySelectorAll('.cell').forEach(function (cell, i) {
-      var d = sizeRot(cell.firstChild, cell.clientWidth - 12, cell.clientHeight - 12, rot[i]);
-      fitBox(cell.firstChild, d[0], d[1]);
-    });
+    // one commander size for the whole layout, set by the smallest box, so every box matches
+    var cells = Array.prototype.slice.call(grid.querySelectorAll('.cell')), kc = 4;
+    var dims = cells.map(function (cell, i) { var d = sizeRot(cell.firstChild, cell.clientWidth - 12, cell.clientHeight - 12, rot[i]); kc = Math.min(kc, cmdK(d[0], d[1])); return d; });
+    cells.forEach(function (cell, i) { fitBox(cell.firstChild, dims[i][0], dims[i][1], kc); centerLife(cell.firstChild); });
     snapAll();
     var sh = screen.querySelector('.sheet');
     if (sh) sizeRot(sh, screen.clientWidth, screen.clientHeight, +sh.dataset.rot);
@@ -458,6 +476,33 @@ var APP_VERSION = '1.0.5';
   if (window.ResizeObserver) new ResizeObserver(layout).observe(screen); else window.addEventListener('resize', layout);
 
   // ---------- life ----------
+  // Jersey 10 has a tall line box and uneven side bearings, so measure the real ink of the digits
+  // and shift the number until the ink (not the font box) sits dead centre.
+  var mctx = document.createElement('canvas').getContext('2d');
+  function inkOf(txt, F) {
+    mctx.font = F + "px 'Jersey 10'";
+    var m = mctx.measureText(txt), fa = m.fontBoundingBoxAscent || F * .8, fd = m.fontBoundingBoxDescent || F * .2;
+    var base = (F - (fa + fd)) / 2 + fa;
+    return { w: m.width, l: -m.actualBoundingBoxLeft, r: m.actualBoundingBoxRight, t: base - m.actualBoundingBoxAscent, b: base + m.actualBoundingBoxDescent };
+  }
+  // size the number to the band between the name and the commander row, then centre its ink in that band
+  function centerLife(el) {
+    var life = el.querySelector('.life'), txt = life.textContent; if (!txt) return;
+    var zone = el.querySelector('.lifezone'), cb = el.querySelector('.cmdbtn');
+    var bandTop = 4, bandBot = cb.offsetTop - zone.offsetTop - 6, k1 = inkOf(txt, 100);
+    var F = Math.max(10, Math.floor(Math.min(1.12 * el.clientWidth / Math.max(2, txt.length), (bandBot - bandTop) / ((k1.b - k1.t) / 100))));
+    life.style.fontSize = F + 'px';
+    var k = inkOf(txt, F);
+    life._cy = (bandTop + bandBot) / 2;
+    life.style.translate = (k.w / 2 - (k.l + k.r) / 2).toFixed(1) + 'px ' + (life._cy - life.offsetTop - (k.t + k.b) / 2).toFixed(1) + 'px';
+  }
+  // where the digits actually are, in lifezone coordinates
+  function inkRect(el) {
+    var life = el.querySelector('.life'), F = parseFloat(getComputedStyle(life).fontSize), k = inkOf(life.textContent, F);
+    var w = k.r - k.l, h = k.b - k.t, cx = life.offsetLeft + life.offsetWidth / 2, cy = life._cy != null ? life._cy : life.offsetTop + F / 2;
+    return { x: cx - w / 2, y: cy - h / 2, w: w, h: h, cx: cx, cy: cy, F: F };
+  }
+  if (document.fonts && document.fonts.load) document.fonts.load("10px 'Jersey 10'").then(function () { grid.querySelectorAll('.pbox').forEach(centerLife); });
   function setLife(i, v, silent) {
     var p = S.players[i]; v = Math.max(0, v);
     var prev = p.life; if (v === prev) return;
@@ -479,14 +524,15 @@ var APP_VERSION = '1.0.5';
   }
   // a few tiny gold pixels pop out of the number on life gain
   function goldBits(el) {
-    var zone = el.querySelector('.lifezone'), life = el.querySelector('.life');
+    var zone = el.querySelector('.lifezone');
     var W = zone.clientWidth, H = zone.clientHeight, dpr = window.devicePixelRatio || 1;
     var cv = document.createElement('canvas'); cv.className = 'fx';
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.width = W + 'px'; cv.style.height = H + 'px';
     zone.appendChild(cv);
     var ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
-    var F = parseFloat(getComputedStyle(life).fontSize), sz = Math.max(2, Math.round(F / 16));
-    var x0 = life.offsetLeft, y0 = life.offsetTop + F * 0.08, w = life.offsetWidth, h = F, parts = [];
+    // bits leave from the edges of the digits themselves, each the size of half a font pixel
+    var ink = inkRect(el), sz = Math.max(2, Math.round(ink.F / 20));
+    var x0 = ink.x, y0 = ink.y, w = ink.w, h = ink.h, parts = [];
     for (var k = 0; k < 9; k++) {
       var side = Math.random(), px0, py0;
       if (side < .5) { px0 = x0 + Math.random() * w; py0 = y0 + (Math.random() < .7 ? 0 : h); } else { px0 = x0 + (side < .75 ? 0 : w); py0 = y0 + Math.random() * h; }
@@ -507,6 +553,7 @@ var APP_VERSION = '1.0.5';
     var lv = p.life;
     el.querySelector('.life').textContent = lv;
     el.style.setProperty('--d', Math.max(2, String(lv).length));
+    centerLife(el);
     var T = thresholds();
     var a = lv <= T[2] ? ['255 46 59', '1s'] : lv <= T[1] ? ['255 138 31', '1.7s'] : lv <= T[0] ? ['255 225 77', '2.6s'] : null;
     if (a) { el.dataset.alert = '1'; el.style.setProperty('--a', a[0]); el.style.setProperty('--spd', a[1]); } else delete el.dataset.alert;
@@ -595,28 +642,36 @@ var APP_VERSION = '1.0.5';
       cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.width = W + 'px'; cv.style.height = H + 'px';
       zone.appendChild(cv);
       var ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
-      // sample the life font at its native pixel size (10 px), then scale each pixel up to the real number
-      var txt = String(S.players[i].life), F = parseFloat(getComputedStyle(life).fontSize), NS = 10, cell = F / NS;
-      var off = document.createElement('canvas'), o = off.getContext('2d'), FONT = NS + "px 'Jersey 10'";
-      o.font = FONT; var mt = o.measureText(txt), fa = mt.fontBoundingBoxAscent || NS * 0.8, fd = mt.fontBoundingBoxDescent || NS * 0.2;
-      off.width = Math.ceil(mt.width) + 1; off.height = Math.ceil(fa + fd) + 1;
-      o = off.getContext('2d'); o.font = FONT; o.textBaseline = 'alphabetic'; o.fillStyle = '#fff'; o.fillText(txt, 0, Math.ceil(fa));
+      // draw the real number at its real size off screen, then cut its ink into the font's own pixel grid
+      // (one Jersey 10 pixel is 3/28 of the font size) so every square lands exactly on the final digits
+      var txt = String(S.players[i].life), F = parseFloat(getComputedStyle(life).fontSize), FONT = F + "px 'Jersey 10'";
+      var off = document.createElement('canvas'), o = off.getContext('2d');
+      o.font = FONT; var mt = o.measureText(txt), L = mt.actualBoundingBoxLeft, A = mt.actualBoundingBoxAscent;
+      var iw = Math.max(1, L + mt.actualBoundingBoxRight), ih = Math.max(1, A + mt.actualBoundingBoxDescent);
+      off.width = Math.ceil(iw) + 2; off.height = Math.ceil(ih) + 2;
+      o = off.getContext('2d'); o.font = FONT; o.textBaseline = 'alphabetic'; o.fillStyle = '#fff'; o.fillText(txt, 1 + L, 1 + A);
+      var u = F * 3 / 28, cols = Math.max(1, Math.round(iw / u)), rows = Math.max(1, Math.round(ih / u)), cw = iw / cols, ch = ih / rows, cell = u;
       var data = o.getImageData(0, 0, off.width, off.height).data, pix = [];
-      for (var y = 0; y < off.height; y++) for (var x = 0; x < off.width; x++) if (data[(y * off.width + x) * 4 + 3] > 110) pix.push([x, y]);
+      for (var y = 0; y < rows; y++) for (var x = 0; x < cols; x++) {
+        var sx = Math.floor(1 + (x + .5) * cw), sy = Math.floor(1 + (y + .5) * ch);
+        if (data[(sy * off.width + sx) * 4 + 3] > 128) pix.push([x, y]);
+      }
       for (var s = pix.length - 1; s > 0; s--) { var r = Math.floor(Math.random() * (s + 1)), tmp = pix[s]; pix[s] = pix[r]; pix[r] = tmp; }
-      var base = life.offsetTop + (F - (fa + fd) * cell) / 2 + fa * cell;
-      var ox = life.offsetLeft + (life.offsetWidth - mt.width * cell) / 2, oy = base - Math.ceil(fa) * cell;
+      var ink = inkRect(el), ox = ink.cx - iw / 2, oy = ink.cy - ih / 2;
       var t0 = performance.now(), drawn = 0, DUR = 420;
       ctx.fillStyle = '#F4F2EA';
       (function build(now) {
         var n = Math.min(pix.length, Math.ceil((now - t0) / DUR * pix.length));
-        for (; drawn < n; drawn++) ctx.fillRect(Math.round(ox + pix[drawn][0] * cell), Math.round(oy + pix[drawn][1] * cell), Math.ceil(cell), Math.ceil(cell));
+        for (; drawn < n; drawn++) {
+          var qx = Math.round(ox + pix[drawn][0] * cw), qy = Math.round(oy + pix[drawn][1] * ch);
+          ctx.fillRect(qx, qy, Math.round(ox + (pix[drawn][0] + 1) * cw) - qx, Math.round(oy + (pix[drawn][1] + 1) * ch) - qy);
+        }
         if (drawn < pix.length) return requestAnimationFrame(build);
         life.style.visibility = ''; chime();
-        var cx = ox + off.width * cell / 2, cy = oy + 4 * cell, sz = Math.max(2, Math.round(cell * 0.7)), parts = [];
+        var cx = ink.cx, cy = ink.cy, sz = Math.max(2, Math.round(cell * 0.5)), parts = [];
         for (var k = 0; k < 26; k++) {
           var ang = Math.random() * Math.PI * 2, sp = (0.6 + Math.random()) * cell * 0.9;
-          parts.push({ x: cx + Math.cos(ang) * off.width * cell * 0.35, y: cy + Math.sin(ang) * 4 * cell * 0.6, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - cell * 0.3, c: Math.random() < .6 ? '#FFD23F' : '#FFF4B8', life: 14 + Math.random() * 10 });
+          parts.push({ x: cx + Math.cos(ang) * iw * 0.5, y: cy + Math.sin(ang) * ih * 0.5, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - cell * 0.3, c: Math.random() < .6 ? '#FFD23F' : '#FFF4B8', life: 14 + Math.random() * 10 });
         }
         var frame = 0;
         (function spark() {
@@ -642,14 +697,61 @@ var APP_VERSION = '1.0.5';
   }
 
   // ---------- name + color ----------
+  // saved names are shared by every player and kept on the phone
+  var NKEY = 'mana-arcade-names';
+  function savedNames() { try { var a = JSON.parse(localStorage.getItem(NKEY) || '[]'); return Array.isArray(a) ? a.map(String) : []; } catch (e) { return []; } }
+  function setSavedNames(a) { try { localStorage.setItem(NKEY, JSON.stringify(a)); } catch (e) {} }
+  // small confirm/prompt panel on top of everything; onOk runs when the data-x="ok" button is tapped
+  function askModal(html, onOk, top) {
+    var m = document.createElement('div'); m.className = 'modal' + (top ? ' top' : '');
+    m.innerHTML = '<div class="panel">' + html + '</div>';
+    screen.appendChild(m);
+    m.addEventListener('click', function (e) {
+      var b = e.target.closest('button');
+      if (!b) { if (e.target === m) m.remove(); return; }
+      if (b.dataset.x === 'close') m.remove();
+      if (b.dataset.x === 'ok') { onOk(); m.remove(); }
+    });
+    return m;
+  }
   function openEdit(i) {
     var p = S.players[i], el = boxEl(i);
     var ed = document.createElement('div'); ed.className = 'edit'; ed.style.setProperty('--c', p.color);
     ed.innerHTML = '<span class="edit-t">NOME E COR</span><input maxlength="10" value="' + esc(p.name) + '" aria-label="Nome" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done">' +
       '<div class="swatches">' + PAL.map(function (c) { return '<button class="swatch" data-c="' + c.c + '" aria-label="' + c.n + '" aria-pressed="' + (c.c === p.color) + '"><i style="background:' + c.c + '"></i></button>'; }).join('') + '</div>' +
-      '<button class="okbtn">OK</button>';
+      '<button class="okbtn">OK</button>' +
+      '<div class="saved"><span class="saved-t">NOMES SALVOS</span><div class="chips"></div></div>';
     screen.appendChild(ed);
     var inp = ed.querySelector('input'); inp.focus(); inp.select(); window.scrollTo(0, 0);
+    var chips = ed.querySelector('.chips');
+    function drawChips() {
+      chips.innerHTML = savedNames().map(function (n, k) {
+        return '<div class="chip"><button class="chip-n" data-k="' + k + '">' + esc(n) + '</button><button class="chip-x" data-del="' + k + '" aria-label="Apagar ' + esc(n) + '">' + px(I.trash, 2) + '</button></div>';
+      }).join('') + '<button class="chip-add" aria-label="Salvar um nome novo">' + px(I.plus, 2) + '</button>';
+    }
+    drawChips();
+    chips.addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      var list = savedNames();
+      if (b.dataset.k) { inp.value = list[+b.dataset.k]; done(); return; }
+      if (b.dataset.del) {
+        var name = list[+b.dataset.del];
+        askModal('<h4>' + px(I.trash, 2) + 'APAGAR NOME?</h4><p><b style="color:#F4F2EA;font-weight:400">' + esc(name) + '</b> sai da lista de nomes salvos de todos os jogadores.</p>' +
+          '<div class="row-btns"><button class="pbtn" data-x="close">CANCELAR</button><button class="pbtn danger" data-x="ok">APAGAR</button></div>', function () {
+          setSavedNames(savedNames().filter(function (n) { return n !== name; })); drawChips();
+        });
+        return;
+      }
+      if (b.classList.contains('chip-add')) {
+        var m = askModal('<h4>' + px(I.plus, 2) + 'SALVAR NOME</h4><input maxlength="10" aria-label="Nome novo" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done">' +
+          '<div class="row-btns"><button class="pbtn" data-x="close">CANCELAR</button><button class="pbtn main" data-x="ok">SALVAR</button></div>', function () {
+          var n = m.querySelector('input').value.trim().toUpperCase().slice(0, 10); if (!n) return;
+          setSavedNames(savedNames().filter(function (x) { return x !== n; }).concat([n])); drawChips();
+        }, true);
+        var mi = m.querySelector('input'); mi.focus();
+        mi.addEventListener('keydown', function (e) { if (e.key === 'Enter') m.querySelector('[data-x="ok"]').click(); });
+      }
+    });
     ed.querySelector('.swatches').addEventListener('click', function (e) {
       var b = e.target.closest('.swatch'); if (!b) return;
       ed.querySelectorAll('.swatch').forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
